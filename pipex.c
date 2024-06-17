@@ -73,7 +73,7 @@ char	**get_exec_args(char *file1, char **cmd_args)
 	return (exec_args);
 }
 
-int	read_file1_to_cmd1(char *file1, char *cmd1)
+int	pass_file1_to_cmd1(char *file1, char *cmd1)
 {
 	char	*cmd_path;
 	char	**cmd_args;
@@ -105,9 +105,8 @@ int	main(int argc, char **argv)
 		return (-1); // write error ?
 	file1 = argv[1];
 	file2 = argv[argc - 1];
-	
 	cmds = get_cmds(argc, argv);
-	read_file1_to_cmd1(file1, cmds[0]);
+	pass_file1_to_cmd1(file1, cmds[0]);
 		
 //	fd1 = open(file1, O_RDONLY);
 //	fd2 = open(file2, O_WRONLY);
