@@ -41,16 +41,52 @@
 // waitpid()	- same as wait() but specifies the specific child process ID (PID)
 
 
-// I can use the which command to find the path of any shell command
-
-
-void	ft_exec(char *cmd_path, char **exec_args, char *output)
+void	ft_exec(char *cmd)
 {
-	pid_t	pid;
-	int		fd[2];
-	char	*tmp;
+	char	**cmd_args;
+	char	*cmd_path;
 
-	if (pipe(fd) == -1)
+	cmd_args = ft_split(cmd, ' ');
+	cmd_path = ft_strjoin("/bin/", cmd_args[0]);
+	if (execve(cmd_path, cmd_args, NULL) == -1)
+	{
+		perror("execve");
+		exit(EXIT_FAILURE);
+	}
+}
+
+void	pipe_infile_to_cmd(int pipe_fd[2], int fd_infile, char *cmd)
+{
+	close(pipe_fd[0]);
+	dup2(fd_infile, STDIN_FILENO);
+	dup2(pipe_fd[1], STDOUT_FILENO);
+	ft_exec(cmd);
+}
+
+void	pipe_cmd_to_outfile(int pipe_fd[2], int fd_outfile, char *cmd)
+{
+	close(pipe_fd[1]);
+	wait(0);
+	dup2(pipe_fd[0], STDIN_FILENO);
+	dup2(fd_outfile, STDOUT_FILENO);
+	ft_exec(cmd);
+}
+
+int	main(int argc, char **argv)
+{
+	int		fd_infile;
+	int		fd_outfile;
+	pid_t	pid;
+	int		pipe_fd[2];
+
+	fd_infile = open(argv[1], O_RDONLY);
+	fd_outfile = open(argv[argc - 1], O_WRONLY, O_TRUNC, O_CREAT, 0644);
+	if (fd_infile == -1 || fd_outfile == -1 || argc < 5)
+	{
+		perror("Invalid input");
+		exit(EXIT_FAILURE);
+	}
+	if (pipe(pipe_fd) == -1)
 	{
 		perror("pipe");
 		exit(EXIT_FAILURE);
@@ -61,135 +97,6 @@ void	ft_exec(char *cmd_path, char **exec_args, char *output)
 		exit(EXIT_FAILURE);
 	}
 	if (pid == 0)
-	{
-		close(fd[0]);
-		dup2(fd[1], 1);
-		if (!execve(cmd_path, exec_args, NULL))
-		{
-			perror("execve");
-			exit(EXIT_FAILURE);
-		}
-		close(fd[1]);
-	}
-	close(fd[1]);
-	wait(NULL);
-	while ((tmp = get_next_line(fd[0])))
-	{
-
-		ft_strlcat(output, tmp, ft_strlen(tmp) + ft_strlen(output) + 1);
-		free(tmp);
-	}
-	close(fd[0]);
-//	write(1, "1\n", 2);
-}
-
-char	**get_exec_args(char *input, char **cmd_args)
-{
-	char	**exec_args;
-	int		arg_count;
-	int		i;
-	int		j;
-
-	arg_count = ft_2D_arrlen(cmd_args);
-	exec_args = malloc(sizeof(char *) * (arg_count + 2));
-	i = 0;
-	j = 0;
-	while (i < arg_count)
-		exec_args[j++] = cmd_args[i++];
-	exec_args[j++] = input;
-	exec_args[j] = NULL;
-	return (exec_args);
-}
-
-int	pass_infile_to_cmd1(char *input, char *cmd1, char *output)
-{
-	char	*cmd1_path;
-	char	**cmd1_args;
-	char	**exec_args;
-
-	cmd1_args = ft_split(cmd1, ' ');
-	if (!cmd1_args)
-		return (0);
-	cmd1_path = ft_strjoin("/bin/", cmd1_args[0]);
-	if (!cmd1_path)
-		return (0);
-	exec_args = get_exec_args(input, cmd1_args);
-	if (!exec_args)
-		return (0);
-	ft_exec(cmd1_path, exec_args, output);
-	free_2D_arr(cmd1_args, true);
-	//free_2D_arr(exec_args, false);
-	free(cmd1_path);
-	return (1);
-}
-
-char	**get_cmds(int argc, char **argv)
-{
-	char	**cmds;
-	int		i;
-	int		j;
-	int		len;
-
-	cmds = malloc(sizeof(char **) * argc - 2);
-	if (!cmds)
-		return (NULL);
-	i = 2;
-	j = 0;
-	while (i < argc - 1)
-	{
-		len = ft_strlen(argv[i]);
-		cmds[j] = malloc(sizeof(char *) * (len + 1));
-		ft_strlcpy(cmds[j++], argv[i++], len + 1);
-	}
-	cmds[j] = NULL;
-	return (cmds);
-}
-
-bool	check_input(int argc, char **argv)
-{
-	int		fd1;
-	int		fd2;
-	char	*buf;
-
-	// check if the first and last argv are actually files
-	fd1 = open(argv[0], O_RDONLY);
-	fd2 = open(argv[argc - 1], O_WRONLY);
-	buf = NULL;
-	if (read(fd1, buf, 0) == -1)
-		return (false);
-	if (read(fd2, buf, 0) == -1)
-		return (false);
-	
-	// check if correct number of args
-	if (argc < 5)
-		return (false); // write error ?
-	
-	// check if cmds are valid shell commands ?? Might have to catch this when I find the path
-	return (true);
-}
-
-int	main(int argc, char **argv)
-{
-	char	*infile;
-//	char	*outfile;
-	char	**cmds;
-	char	*output = malloc(sizeof(char) * 1000);
-//	int		i;
-
-//	if (!check_input(argc, argv))
-//		return (-1);
-	infile = argv[1];
-//	outfile = argv[argc - 1];
-	cmds = get_cmds(argc, argv);
-	if (!cmds)
-		return (-1);
-	output[0] = '\0';
-	pass_infile_to_cmd1(infile, cmds[0], output);
-	ft_printf("%s\n", output);
-	free(output);
-//	i = 1;
-//	while (cmds[i])
-//		exec(cmds[i]);
-//	read_cmd_to_outfile(outfile, cmds[i]);
-//	free_mem();
+		pipe_infile_to_cmd(pipe_fd, fd_infile, argv[2]);
+	pipe_cmd_to_outfile(pipe_fd, fd_outfile, argv[3]);	
 }
