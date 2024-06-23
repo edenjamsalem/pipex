@@ -13,3 +13,10 @@
 #include "../libft/libft.h"
 #include <sys/wait.h> 
 
+void	check_cmds_valid(char **cmds);
+
+void	check_infile_valid(char **argv);
+
+void	check_input_count(int argc);
+
+void	check_input(int	argc, char **argv, char **cmds);

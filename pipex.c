@@ -61,6 +61,7 @@ void	pipe_infile_to_cmd(int pipe_fd[2], int fd_infile, char *cmd)
 	dup2(fd_infile, STDIN_FILENO);
 	dup2(pipe_fd[1], STDOUT_FILENO);
 	ft_exec(cmd);
+	ft_printf("1\n");
 }
 
 void	pipe_cmd_to_outfile(int pipe_fd[2], int fd_outfile, char *cmd)
@@ -72,20 +73,47 @@ void	pipe_cmd_to_outfile(int pipe_fd[2], int fd_outfile, char *cmd)
 	ft_exec(cmd);
 }
 
+char	**parse_cmds(int argc, char **argv)
+{
+	char	**cmds;
+	int		len;
+	int		i;
+	int		j;
+
+	cmds = malloc(sizeof(char *) * (argc - 2));
+	if (!cmds)
+		return (NULL);
+	i = 2;
+	j = 0;
+	while (i < argc - 1)
+	{
+		len = ft_strlen(argv[i]);
+		cmds[j] = malloc(sizeof(char) * (len + 1));
+		if (!cmds[j])
+		{
+			free_2D_arr(cmds, j - 1);
+			return (NULL);
+		}
+		ft_strlcpy(cmds[j++], argv[i++], (len + 1));
+	}
+	cmds[j] = NULL;
+	return (cmds);
+}
+
 int	main(int argc, char **argv)
 {
 	int		fd_infile;
 	int		fd_outfile;
-	pid_t	pid;
 	int		pipe_fd[2];
+	char	**cmds;
+	pid_t	pid;
 
+	cmds = parse_cmds(argc, argv);
+	if (!cmds)
+		return (-1);
+	check_input(argc, argv, cmds);
 	fd_infile = open(argv[1], O_RDONLY);
-	fd_outfile = open(argv[argc - 1], O_WRONLY, O_TRUNC, O_CREAT, 0644);
-	if (fd_infile == -1 || fd_outfile == -1 || argc < 5)
-	{
-		perror("Invalid input");
-		exit(EXIT_FAILURE);
-	}
+	fd_outfile = open(argv[argc -1], O_CREAT | O_WRONLY | O_TRUNC, 0644);
 	if (pipe(pipe_fd) == -1)
 	{
 		perror("pipe");
@@ -97,6 +125,7 @@ int	main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 	if (pid == 0)
-		pipe_infile_to_cmd(pipe_fd, fd_infile, argv[2]);
-	pipe_cmd_to_outfile(pipe_fd, fd_outfile, argv[3]);	
+		pipe_infile_to_cmd(pipe_fd, fd_infile, cmds[0]);
+	pipe_cmd_to_outfile(pipe_fd, fd_outfile, cmds[1]);	
+	free_2D_arr(cmds, ft_2D_arrlen(cmds));
 }

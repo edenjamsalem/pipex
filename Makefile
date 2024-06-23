@@ -20,7 +20,8 @@ OBJS = $(SRCS:%.c=$(OBJDIR)/%.o)
 LIBFTDIR = ../libft
 LIBFT = $(LIBFTDIR)/libft.a
 
-SRCS =	pipex.c
+SRCS =	pipex.c \
+		check_fns.c
 
 all: $(OBJDIR) $(NAME) $(LIBFT)
 
