@@ -64,6 +64,15 @@ void	pipe_infile_to_cmd(int pipe_fd[2], int fd_infile, char *cmd)
 	ft_printf("1\n");
 }
 
+void	pipe_cmd_to_cmd(int pipe_fd[2], char *cmd1)
+{
+	wait(0);
+	dup2(pipe_fd[0], STDIN_FILENO);
+	dup2(pipe_fd[1], STDOUT_FILENO);
+	ft_exec(cmd1);
+}
+
+
 void	pipe_cmd_to_outfile(int pipe_fd[2], int fd_outfile, char *cmd)
 {
 	close(pipe_fd[1]);
@@ -107,6 +116,7 @@ int	main(int argc, char **argv)
 	int		pipe_fd[2];
 	char	**cmds;
 	pid_t	pid;
+	int		i;
 
 	cmds = parse_cmds(argc, argv);
 	if (!cmds)
@@ -126,6 +136,18 @@ int	main(int argc, char **argv)
 	}
 	if (pid == 0)
 		pipe_infile_to_cmd(pipe_fd, fd_infile, cmds[0]);
-	pipe_cmd_to_outfile(pipe_fd, fd_outfile, cmds[1]);	
+	i = 1;
+	while (cmds[i + 1])
+	{
+		if ((pid = fork()) < 0)
+		{
+			perror("fork");
+			exit(EXIT_FAILURE);
+		}
+		if (pid == 0)
+			pipe_cmd_to_cmd(pipe_fd, cmds[i]);
+		i++;
+	}
+	pipe_cmd_to_outfile(pipe_fd, fd_outfile, cmds[i]);	
 	free_2D_arr(cmds, ft_2D_arrlen(cmds));
 }
