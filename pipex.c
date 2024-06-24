@@ -71,62 +71,41 @@ pid_t	pipe_fork(int pipe_fd[2])
 	return (pid);
 }
 
-void	pipe_infile_to_cmd(int pipe_fd[2][2], int fd_in, char *cmd)
+void	pipe_infile_to_cmd(int **pipe_fd, int fd_in, char *cmd)
 {
-	close(pipe_fd[0][0]);
-	dup2(fd_in, STDIN_FILENO);
-	dup2(pipe_fd[0][1], STDOUT_FILENO);
-	ft_exec(cmd);
+	pid_t	pid;
+	
+	pid = pipe_fork(pipe_fd[0]);
+	if (pid == 0)
+	{
+		close(pipe_fd[0][0]);
+		dup2(fd_in, STDIN_FILENO);
+		dup2(pipe_fd[0][1], STDOUT_FILENO);
+		ft_exec(cmd);
+	}
+	close(pipe_fd[0][1]);
 }
 
-void	pipe_cmd_to_cmd(int pipe_fd[2][2], char *cmd, int iter)
+void	pipe_cmd_to_cmd(int **pipe_fd, char *cmd, int i)
 {
 	pid_t	pid;
 
-	if (iter % 2 == 0)
-		pid = pipe_fork(pipe_fd[0]);
-	else
-		pid = pipe_fork(pipe_fd[1]);
+	pid = pipe_fork(pipe_fd[i]);
 	if (pid == 0)	
 	{
-		if (iter % 2 == 0)
-		{
-			close(pipe_fd[0][0]);
-			close(pipe_fd[1][1]);
-			dup2(pipe_fd[1][0], STDIN_FILENO);
-			dup2(pipe_fd[0][1], STDOUT_FILENO);
-		}	
-		else
-		{
-			close(pipe_fd[1][0]);
-			close(pipe_fd[0][1]);
-			dup2(pipe_fd[0][0], STDIN_FILENO);
-			dup2(pipe_fd[1][1], STDOUT_FILENO);
-		}
+		dup2(pipe_fd[i - 1][0], STDIN_FILENO);
+		close(pipe_fd[i][0]);
+		dup2(pipe_fd[i][1], STDOUT_FILENO);
 		ft_exec(cmd);
 	}
-	if (iter % 2 == 0)
-	{
-		close(pipe_fd[0][1]);
-		close(pipe_fd[1][0]);
-		close(pipe_fd[1][1]);
-	}
-	else
-	{
-		close(pipe_fd[1][1]);
-		close(pipe_fd[0][0]);
-		close(pipe_fd[0][1]);
-	}
+	close(pipe_fd[i][1]);
 }
 
 
-void	pipe_cmd_to_outfile(int pipe_fd[2][2], int fd_out, char *cmd, int iter)
+void	pipe_cmd_to_outfile(int pipe_fd[2], int fd_out, char *cmd)
 {
 	wait(0);
-	if (iter % 2 == 0)
-		dup2(pipe_fd[1][0], STDIN_FILENO);
-	else	
-		dup2(pipe_fd[0][0], STDIN_FILENO);
+	dup2(pipe_fd[0], STDIN_FILENO);
 	dup2(fd_out, STDOUT_FILENO);
 	ft_exec(cmd);
 }
@@ -158,29 +137,35 @@ char	**parse_cmds(int argc, char **argv)
 	return (cmds);
 }
 
-//TODO: I need to create a new pipe for each extra child process
-// 		I need a new pipe_fd for each new pipe ??
-
-
+int	**allocate_pipe_fd(int cmd_count)
+{
+	int	i;
+	int	**pipe_fd;
+	
+	pipe_fd = malloc(sizeof(int *) * (cmd_count + 1));
+	i = 0;
+	while (i < cmd_count)
+		pipe_fd[i++] = malloc(sizeof(int) * 2);
+	pipe_fd[cmd_count] = NULL;
+	return (pipe_fd);
+}
 
 int	main(int argc, char **argv)
 {
 	int		fd_in;
 	int		fd_out;
-	int		pipe_fd[2][2];
+	int		**pipe_fd;
 	char	**cmds;
-	pid_t	pid;
 	int		i;
 
 	cmds = parse_cmds(argc, argv);
 	if (!cmds)
 		return (-1);
 	check_input(argc, argv, cmds);
+	pipe_fd = allocate_pipe_fd(ft_2D_arrlen(cmds));
 	fd_in = open(argv[1], O_RDONLY);
 	fd_out = open(argv[argc -1], O_CREAT | O_WRONLY | O_TRUNC, 0644);
-	pid = pipe_fork(pipe_fd[0]);
-	if (pid == 0)
-		pipe_infile_to_cmd(pipe_fd, fd_in, cmds[0]);
+	pipe_infile_to_cmd(pipe_fd, fd_in, cmds[0]);
 	i = 1;
 	while (cmds[i + 1])
 	{
@@ -188,6 +173,5 @@ int	main(int argc, char **argv)
 		pipe_cmd_to_cmd(pipe_fd, cmds[i], i);
 		i++;
 	}
-	ft_printf("cmd = %s\n", cmds[i]);
-	pipe_cmd_to_outfile(pipe_fd, fd_out, cmds[i], i);	
+	pipe_cmd_to_outfile(pipe_fd[i - 1], fd_out, cmds[i]);	
 }
