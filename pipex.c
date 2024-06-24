@@ -40,14 +40,13 @@
 
 // waitpid()	- same as wait() but specifies the specific child process ID (PID)
 
-
 void	ft_exec(char *cmd)
 {
 	char	**cmd_args;
 	char	*cmd_path;
 
 	cmd_args = ft_split(cmd, ' ');
-	cmd_path = ft_strjoin("/bin/", cmd_args[0]);
+	cmd_path = ft_strjoin("/usr/bin/", cmd_args[0]);
 	if (execve(cmd_path, cmd_args, NULL) == -1)
 	{
 		perror("execve");
@@ -55,30 +54,80 @@ void	ft_exec(char *cmd)
 	}
 }
 
-void	pipe_infile_to_cmd(int pipe_fd[2], int fd_infile, char *cmd)
+pid_t	pipe_fork(int pipe_fd[2])
 {
-	close(pipe_fd[0]);
-	dup2(fd_infile, STDIN_FILENO);
-	dup2(pipe_fd[1], STDOUT_FILENO);
+	pid_t	pid;
+
+	if (pipe(pipe_fd) == -1)
+	{
+		perror("pipe");
+		exit(EXIT_FAILURE);
+	}
+	if ((pid = fork()) < 0)
+	{
+		perror("fork");
+		exit(EXIT_FAILURE);
+	}
+	return (pid);
+}
+
+void	pipe_infile_to_cmd(int pipe_fd[2][2], int fd_in, char *cmd)
+{
+	close(pipe_fd[0][0]);
+	dup2(fd_in, STDIN_FILENO);
+	dup2(pipe_fd[0][1], STDOUT_FILENO);
 	ft_exec(cmd);
-	ft_printf("1\n");
 }
 
-void	pipe_cmd_to_cmd(int pipe_fd[2], char *cmd1)
+void	pipe_cmd_to_cmd(int pipe_fd[2][2], char *cmd, int iter)
 {
-	wait(0);
-	dup2(pipe_fd[0], STDIN_FILENO);
-	dup2(pipe_fd[1], STDOUT_FILENO);
-	ft_exec(cmd1);
+	pid_t	pid;
+
+	if (iter % 2 == 0)
+		pid = pipe_fork(pipe_fd[0]);
+	else
+		pid = pipe_fork(pipe_fd[1]);
+	if (pid == 0)	
+	{
+		if (iter % 2 == 0)
+		{
+			close(pipe_fd[0][0]);
+			close(pipe_fd[1][1]);
+			dup2(pipe_fd[1][0], STDIN_FILENO);
+			dup2(pipe_fd[0][1], STDOUT_FILENO);
+		}	
+		else
+		{
+			close(pipe_fd[1][0]);
+			close(pipe_fd[0][1]);
+			dup2(pipe_fd[0][0], STDIN_FILENO);
+			dup2(pipe_fd[1][1], STDOUT_FILENO);
+		}
+		ft_exec(cmd);
+	}
+	if (iter % 2 == 0)
+	{
+		close(pipe_fd[0][1]);
+		close(pipe_fd[1][0]);
+		close(pipe_fd[1][1]);
+	}
+	else
+	{
+		close(pipe_fd[1][1]);
+		close(pipe_fd[0][0]);
+		close(pipe_fd[0][1]);
+	}
 }
 
 
-void	pipe_cmd_to_outfile(int pipe_fd[2], int fd_outfile, char *cmd)
+void	pipe_cmd_to_outfile(int pipe_fd[2][2], int fd_out, char *cmd, int iter)
 {
-	close(pipe_fd[1]);
 	wait(0);
-	dup2(pipe_fd[0], STDIN_FILENO);
-	dup2(fd_outfile, STDOUT_FILENO);
+	if (iter % 2 == 0)
+		dup2(pipe_fd[1][0], STDIN_FILENO);
+	else	
+		dup2(pipe_fd[0][0], STDIN_FILENO);
+	dup2(fd_out, STDOUT_FILENO);
 	ft_exec(cmd);
 }
 
@@ -109,11 +158,16 @@ char	**parse_cmds(int argc, char **argv)
 	return (cmds);
 }
 
+//TODO: I need to create a new pipe for each extra child process
+// 		I need a new pipe_fd for each new pipe ??
+
+
+
 int	main(int argc, char **argv)
 {
-	int		fd_infile;
-	int		fd_outfile;
-	int		pipe_fd[2];
+	int		fd_in;
+	int		fd_out;
+	int		pipe_fd[2][2];
 	char	**cmds;
 	pid_t	pid;
 	int		i;
@@ -122,32 +176,18 @@ int	main(int argc, char **argv)
 	if (!cmds)
 		return (-1);
 	check_input(argc, argv, cmds);
-	fd_infile = open(argv[1], O_RDONLY);
-	fd_outfile = open(argv[argc -1], O_CREAT | O_WRONLY | O_TRUNC, 0644);
-	if (pipe(pipe_fd) == -1)
-	{
-		perror("pipe");
-		exit(EXIT_FAILURE);
-	}
-	if ((pid = fork()) < 0)
-	{
-		perror("fork");
-		exit(EXIT_FAILURE);
-	}
+	fd_in = open(argv[1], O_RDONLY);
+	fd_out = open(argv[argc -1], O_CREAT | O_WRONLY | O_TRUNC, 0644);
+	pid = pipe_fork(pipe_fd[0]);
 	if (pid == 0)
-		pipe_infile_to_cmd(pipe_fd, fd_infile, cmds[0]);
+		pipe_infile_to_cmd(pipe_fd, fd_in, cmds[0]);
 	i = 1;
 	while (cmds[i + 1])
 	{
-		if ((pid = fork()) < 0)
-		{
-			perror("fork");
-			exit(EXIT_FAILURE);
-		}
-		if (pid == 0)
-			pipe_cmd_to_cmd(pipe_fd, cmds[i]);
+		wait(0);
+		pipe_cmd_to_cmd(pipe_fd, cmds[i], i);
 		i++;
 	}
-	pipe_cmd_to_outfile(pipe_fd, fd_outfile, cmds[i]);	
-	free_2D_arr(cmds, ft_2D_arrlen(cmds));
+	ft_printf("cmd = %s\n", cmds[i]);
+	pipe_cmd_to_outfile(pipe_fd, fd_out, cmds[i], i);	
 }
