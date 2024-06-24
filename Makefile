@@ -17,7 +17,7 @@ CFLAGS = -Wall -Werror -Wextra -g3
 OBJDIR = ./build
 OBJS = $(SRCS:%.c=$(OBJDIR)/%.o)
 
-LIBFTDIR = ../libft
+LIBFTDIR = ./libft
 LIBFT = $(LIBFTDIR)/libft.a
 
 SRCS =	pipex.c \
