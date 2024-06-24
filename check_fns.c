@@ -57,7 +57,7 @@ static bool	check_infile_valid(char *infile)
 
 static bool	check_outfile_valid(char *outfile)
 {
-	if (access(outfile, W_OK) == -1)
+	if ((access(outfile, F_OK) != -1) && (access(outfile, W_OK) == -1))
 	{
 		ft_printf("bash: ");
 		perror(outfile);
