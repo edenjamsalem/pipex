@@ -21,7 +21,8 @@ LIBFTDIR = ../libft
 LIBFT = $(LIBFTDIR)/libft.a
 
 SRCS =	pipex.c \
-		check_fns.c
+		check_fns.c \
+		pipe_fns.c
 
 all: $(OBJDIR) $(NAME) $(LIBFT)
 

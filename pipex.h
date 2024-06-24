@@ -13,10 +13,14 @@
 #include "../libft/libft.h"
 #include <sys/wait.h> 
 
-void	check_cmds_valid(char **cmds);
+void	check_input(int argc, char **argv, char **cmds);
 
-void	check_infile_valid(char **argv);
+pid_t	pipe_fork(int pipe_fd[2]);
 
-void	check_input_count(int argc);
+void	pipe_infile_to_cmd(int pipe_fd[2], int fd_in, char *cmd);
 
-void	check_input(int	argc, char **argv, char **cmds);
+void	pipe_cmd_to_cmd(int **pipe_fd, char *cmd, int i);
+
+void	pipe_cmd_to_outfile(int pipe_fd[2], int fd_out, char *cmd);
+
+void	ft_exec(char *cmd);
