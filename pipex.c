@@ -12,73 +12,32 @@
 
 #include "pipex.h"
 
-void	ft_exec(char *cmd)
+int	get_here_doc_input(char *limiter)
 {
-	char	**cmd_args;
-	char	*cmd_path;
+	pid_t	pid;
+	char	input[4096];
+	int		bytes_read;
+	int		pipe_fd[2];
 
-	cmd_args = ft_split(cmd, ' ');
-	cmd_path = ft_strjoin("/usr/bin/", cmd_args[0]);
-	if (execve(cmd_path, cmd_args, NULL) == -1)
+	pid = pipe_fork(pipe_fd);
+	if (!pid)
 	{
-		perror("execve");
-		exit(EXIT_FAILURE);
-	}
-}
-
-char	**parse_cmds(int argc, char **argv)
-{
-	char	**cmds;
-	int		len;
-	int		i;
-	int		j;
-
-	cmds = malloc(sizeof(char *) * (argc - 2));
-	if (!cmds)
-		return (NULL);
-	i = 2;
-	j = 0;
-	while (i < argc - 1)
-	{
-		len = ft_strlen(argv[i]);
-		cmds[j] = malloc(sizeof(char) * (len + 1));
-		if (!cmds[j])
+		close(pipe_fd[0]);
+		while (1)
 		{
-			free_2d_arr((void *)cmds, j - 1);
-			return (NULL);
+			write(1, "> ", 2);
+			bytes_read = read(STDIN_FILENO, input, 4096);
+			if (ft_strncmp(input, limiter, ft_strlen(limiter)) == 0)
+				exit(EXIT_SUCCESS);
+			write(pipe_fd[1], input, bytes_read);
 		}
-		ft_strlcpy(cmds[j++], argv[i++], (len + 1));
 	}
-	cmds[j] = NULL;
-	return (cmds);
+	close(pipe_fd[1]);
+	wait(0);
+	return (pipe_fd[0]);
 }
 
-int	**allocate_pipe_fd(int size)
-{
-	int	i;
-	int	**pipe_fd;
-
-	if (size < 1)
-		return (NULL);
-	pipe_fd = malloc(sizeof(int *) * (size + 1));
-	if (!pipe_fd)
-		return (NULL);
-	i = 0;
-	while (i < size)
-	{
-		pipe_fd[i] = malloc(sizeof(int) * 2);
-		if (!pipe_fd[i])
-		{
-			free_2d_arr((void *)pipe_fd, i - 1);
-			return (NULL);
-		}
-		i++;
-	}
-	pipe_fd[size] = NULL;
-	return (pipe_fd);
-}
-
-int	main(int argc, char **argv)
+int	main(int argc, char **argv, char **envp)
 {
 	int		fd_in;
 	int		fd_out;
@@ -86,20 +45,24 @@ int	main(int argc, char **argv)
 	char	**cmds;
 	int		i;
 
-	cmds = parse_cmds(argc, argv);
-	if (!cmds)
-		return (-1);
-	check_input(argc, argv, cmds);
-	pipe_fd = allocate_pipe_fd(ft_2d_arrlen((void *)cmds));
-	fd_in = open(argv[1], O_RDONLY);
-	fd_out = open(argv[argc -1], O_CREAT | O_WRONLY | O_TRUNC, 0644);
-	pipe_infile_to_cmd(pipe_fd[0], fd_in, cmds[0]);
+	check_input(argc, argv);
+	if (ft_strncmp(argv[1], "here_doc", 8) == 0)
+	{
+		cmds = parse_cmds(argc, argv, 3);
+		pipe_fd = allocate_pipe_fd(ft_2d_arrlen((void *)cmds));
+		fd_in = get_here_doc_input(argv[2]);
+		fd_out = open(argv[argc - 1], O_CREAT | O_WRONLY | O_APPEND, 0644);
+	}
+	else
+	{
+		cmds = parse_cmds(argc, argv, 2);
+		pipe_fd = allocate_pipe_fd(ft_2d_arrlen((void *)cmds));
+		fd_in = open(argv[1], O_RDONLY);
+		fd_out = open(argv[argc - 1], O_CREAT | O_WRONLY | O_TRUNC, 0644);
+	}
+	pipe_infile_to_cmd(pipe_fd[0], fd_in, cmds[0], envp);
 	i = 1;
 	while (cmds[i + 1])
-	{
-		wait(0);
-		pipe_cmd_to_cmd(pipe_fd, cmds[i], i);
-		i++;
-	}
-	pipe_cmd_to_outfile(pipe_fd[i - 1], fd_out, cmds[i]);
+		pipe_cmd_to_cmd(pipe_fd, cmds, i++, envp);
+	pipe_cmd_to_outfile(pipe_fd[i - 1], fd_out, cmds[i], envp);
 }

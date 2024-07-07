@@ -17,10 +17,11 @@ CFLAGS = -Wall -Werror -Wextra -g3
 OBJDIR = ./build
 OBJS = $(SRCS:%.c=$(OBJDIR)/%.o)
 
-LIBFTDIR = ./libft
+LIBFTDIR = ../libft
 LIBFT = $(LIBFTDIR)/libft.a
 
 SRCS =	pipex.c \
+		pipex_utils.c \
 		check_fns.c \
 		pipe_fns.c
 
@@ -44,7 +45,7 @@ clean:
 
 fclean: clean
 	make -C $(LIBFTDIR) fclean
-	rm -fr $(EXECUTABLE)
+	rm -fr $(NAME)
 
 re: fclean all
 

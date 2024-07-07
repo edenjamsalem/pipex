@@ -30,7 +30,7 @@ pid_t	pipe_fork(int pipe_fd[2])
 	return (pid);
 }
 
-void	pipe_infile_to_cmd(int pipe_fd[2], int fd_in, char *cmd)
+void	pipe_infile_to_cmd(int pipe_fd[2], int fd_in, char *cmd, char **envp)
 {
 	pid_t	pid;
 
@@ -40,30 +40,31 @@ void	pipe_infile_to_cmd(int pipe_fd[2], int fd_in, char *cmd)
 		close(pipe_fd[0]);
 		dup2(fd_in, STDIN_FILENO);
 		dup2(pipe_fd[1], STDOUT_FILENO);
-		ft_exec(cmd);
+		ft_exec(cmd, envp);
 	}
 	close(pipe_fd[1]);
+	wait(0);
 }
 
-void	pipe_cmd_to_cmd(int **pipe_fd, char *cmd, int i)
+void	pipe_cmd_to_cmd(int **pipe_fd, char **cmds, int i, char **envp)
 {
 	pid_t	pid;
 
 	pid = pipe_fork(pipe_fd[i]);
 	if (pid == 0)
 	{
-		dup2(pipe_fd[i - 1][0], STDIN_FILENO);
 		close(pipe_fd[i][0]);
+		dup2(pipe_fd[i - 1][0], STDIN_FILENO);
 		dup2(pipe_fd[i][1], STDOUT_FILENO);
-		ft_exec(cmd);
+		ft_exec(cmds[i], envp);
 	}
 	close(pipe_fd[i][1]);
+	wait(0);
 }
 
-void	pipe_cmd_to_outfile(int pipe_fd[2], int fd_out, char *cmd)
+void	pipe_cmd_to_outfile(int pipe_fd[2], int fd_out, char *cmd, char **envp)
 {
-	wait(0);
 	dup2(pipe_fd[0], STDIN_FILENO);
 	dup2(fd_out, STDOUT_FILENO);
-	ft_exec(cmd);
+	ft_exec(cmd, envp);
 }
