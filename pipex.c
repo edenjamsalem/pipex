@@ -12,12 +12,22 @@
 
 #include "pipex.h"
 
+bool	is_limiter(char *input, char *limiter)
+{
+	if (ft_strncmp(input, limiter, ft_strlen(limiter)) == 0)
+	{
+		if (ft_strlen(input) - 1 == ft_strlen(limiter))
+			return (true);
+	}
+	return (false);
+}
+
 int	get_here_doc_input(char *limiter)
 {
 	pid_t	pid;
 	char	input[4096];
-	int		bytes_read;
 	int		pipe_fd[2];
+	int		bytes_read;
 
 	pid = pipe_fork(pipe_fd);
 	if (!pid)
@@ -27,7 +37,8 @@ int	get_here_doc_input(char *limiter)
 		{
 			write(1, "> ", 2);
 			bytes_read = read(STDIN_FILENO, input, 4096);
-			if (ft_strncmp(input, limiter, ft_strlen(limiter)) == 0)
+			input[bytes_read] = '\0';
+			if (is_limiter(input, limiter))
 				exit(EXIT_SUCCESS);
 			write(pipe_fd[1], input, bytes_read);
 		}
@@ -49,17 +60,16 @@ int	main(int argc, char **argv, char **envp)
 	if (ft_strncmp(argv[1], "here_doc", 8) == 0)
 	{
 		cmds = parse_cmds(argc, argv, 3);
-		pipe_fd = allocate_pipe_fd(ft_2d_arrlen((void *)cmds));
 		fd_in = get_here_doc_input(argv[2]);
 		fd_out = open(argv[argc - 1], O_CREAT | O_WRONLY | O_APPEND, 0644);
 	}
 	else
 	{
 		cmds = parse_cmds(argc, argv, 2);
-		pipe_fd = allocate_pipe_fd(ft_2d_arrlen((void *)cmds));
 		fd_in = open(argv[1], O_RDONLY);
 		fd_out = open(argv[argc - 1], O_CREAT | O_WRONLY | O_TRUNC, 0644);
 	}
+	pipe_fd = allocate_pipe_fd(ft_2d_arrlen((void *)cmds));
 	pipe_infile_to_cmd(pipe_fd[0], fd_in, cmds[0], envp);
 	i = 1;
 	while (cmds[i + 1])

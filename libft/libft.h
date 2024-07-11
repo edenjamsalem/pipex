@@ -181,5 +181,4 @@ char		*ft_strtrunc_front(char *str, unsigned int chr_count);
 
 long		ft_atol(const char *str);
 
-
 #endif
