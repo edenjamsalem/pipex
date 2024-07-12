@@ -39,7 +39,7 @@ char	*find_cmd_path(char *cmd, char **envp)
 	i = 0;
 	while (file_paths[i])
 	{
-		tmp = ft_strjoin(file_paths[i], "/");
+		tmp = ft_strjoin(file_paths[i++], "/");
 		cmd_path = ft_strjoin(tmp, cmd);
 		free (tmp);
 		if (access(cmd_path, F_OK) != -1)
@@ -47,7 +47,7 @@ char	*find_cmd_path(char *cmd, char **envp)
 			free_2d_arr((void **)file_paths, ft_2d_arrlen((void **)file_paths));
 			return (cmd_path);
 		}
-		i++;
+		free(cmd_path);
 	}
 	free_2d_arr((void **)file_paths, ft_2d_arrlen((void **)file_paths));
 	return (NULL);

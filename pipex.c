@@ -56,7 +56,7 @@ int	main(int argc, char **argv, char **envp)
 	char	**cmds;
 	int		i;
 
-	check_input(argc, argv);
+	check_input(argc, argv, envp);
 	if (ft_strncmp(argv[1], "here_doc", 8) == 0)
 	{
 		cmds = parse_cmds(argc, argv, 3);

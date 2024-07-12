@@ -15,6 +15,7 @@
 static bool	check_cmds_valid(int argc, char **argv, char **envp, bool here_doc)
 {
 	char	**cmd_args;
+	char	*cmd_path;
 	int		i;
 	bool	error;
 
@@ -25,11 +26,15 @@ static bool	check_cmds_valid(int argc, char **argv, char **envp, bool here_doc)
 	while (i < argc - 1)
 	{
 		cmd_args = ft_split(argv[i++], ' ');
-		if (!find_cmd_path(cmd_args[0], envp))
+		cmd_path = find_cmd_path(cmd_args[0], envp);
+		if (!cmd_path)
 		{
-			ft_printf("%s: command not found\n", cmd_args[0]);
+			write(2, cmd_args[0], ft_strlen(cmd_args[0]));
+			ft_putstr_fd(": command not found\n", 2);
 			error = true;
 		}
+		free_2d_arr((void **)cmd_args, ft_2d_arrlen((void **)cmd_args));
+		free(cmd_path);
 	}
 	if (error)
 		return (false);
@@ -64,11 +69,11 @@ static bool	check_outfile_valid(char *outfile)
 	return (true);
 }
 
-static bool	check_input_count(int argc, char **argv)
+static bool	check_input_count(int argc, bool here_doc)
 {
-	if ((ft_strncmp(argv[1], "here_doc", 8) == 0 && argc < 6) || argc < 5)
+	if ((here_doc && argc < 6) || argc < 5)
 	{
-		ft_putstr_fd("Missing arguments\n", 2);
+		ft_putstr_fd("Too few arguments\n", 2);
 		return (false);
 	}
 	return (true);
@@ -83,7 +88,7 @@ void	check_input(int argc, char **argv, char **envp)
 	here_doc = false;
 	if (ft_strncmp(argv[1], "here_doc", 8) == 0)
 		here_doc = true;
-	if (!check_input_count(argc, argv))
+	if (!check_input_count(argc, here_doc))
 		exit(EXIT_FAILURE);
 	if (!check_outfile_valid(argv[argc - 1]))
 		error = true;

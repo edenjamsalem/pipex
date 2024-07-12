@@ -6,7 +6,7 @@
 #    By: eamsalem <marvin@42.fr>                    +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2024/06/17 14:04:43 by eamsalem          #+#    #+#              #
-#    Updated: 2024/06/24 12:17:37 by eamsalem         ###   ########.fr        #
+#    Updated: 2024/07/12 12:01:56 by eamsalem         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -21,7 +21,7 @@ LIBFTDIR = ./libft
 LIBFT = $(LIBFTDIR)/libft.a
 
 SRCS =	pipex.c \
-		pipex_utils.c \
+		utils.c \
 		check_fns.c \
 		pipe_fns.c
 
