@@ -13,7 +13,7 @@
 #include "./libft/libft.h"
 #include <sys/wait.h> 
 
-void	check_input(int argc, char **argv);
+void	check_input(int argc, char **argv, char **envp);
 
 pid_t	pipe_fork(int pipe_fd[2]);
 

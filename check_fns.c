@@ -12,9 +12,8 @@
 
 #include "pipex.h"
 
-static bool	check_cmds_valid(int argc, char **argv, bool here_doc)
+static bool	check_cmds_valid(int argc, char **argv, char **envp, bool here_doc)
 {
-	char	*file_path;
 	char	**cmd_args;
 	int		i;
 	bool	error;
@@ -25,15 +24,12 @@ static bool	check_cmds_valid(int argc, char **argv, bool here_doc)
 		i = 3;
 	while (i < argc - 1)
 	{
-		cmd_args = ft_split(argv[i], ' ');
-		file_path = ft_strjoin("/usr/bin/", cmd_args[0]);
-		if (access(file_path, F_OK) == -1)
+		cmd_args = ft_split(argv[i++], ' ');
+		if (!find_cmd_path(cmd_args[0], envp))
 		{
 			ft_printf("%s: command not found\n", cmd_args[0]);
 			error = true;
 		}
-		free(file_path);
-		i++;
 	}
 	if (error)
 		return (false);
@@ -78,7 +74,7 @@ static bool	check_input_count(int argc, char **argv)
 	return (true);
 }
 
-void	check_input(int argc, char **argv)
+void	check_input(int argc, char **argv, char **envp)
 {
 	bool	error;
 	bool	here_doc;
@@ -93,7 +89,7 @@ void	check_input(int argc, char **argv)
 		error = true;
 	if (!here_doc && !check_infile_valid(argv[1]))
 		error = true;
-	if (!check_cmds_valid(argc, argv, here_doc))
+	if (!check_cmds_valid(argc, argv, envp, here_doc))
 		error = true;
 	if (error)
 		exit(EXIT_FAILURE);
